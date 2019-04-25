@@ -1,3 +1,8 @@
+/**
+ * Echobit - Arduino
+ * 
+ * Control de Node MCU v1.0 para el proyecto Echobit
+ */
 #ifdef ESP32
 #include <WiFi.h>
 #elif defined(ESP8266)
@@ -71,6 +76,20 @@ void messageReceived(char *topic, byte *payload, unsigned int length)
     Serial.print((char)payload[i]);
   }
   Serial.println();
+  // Parsear JSON
+  StaticJsonDocument<length> doc;
+  DeserializationError error = deserializeJson(doc, payload);
+  if (error) {
+    std::cerr << "deserializeJson() failed: " << error.c_str() << std::endl;
+    return 1;
+  }
+
+  // Extraer PIN
+  int pin = doc["pin"];
+
+  digitalWrite(pin, LOW);
+  delay(5000);
+  digitalWrite(pin, HIGH);
 }
 
 void pubSubErr(int8_t MQTTErr)
@@ -211,6 +230,8 @@ void setup()
   client.setCallback(messageReceived);
 
   connectToMqtt();
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
 }
 
 void loop()
@@ -225,7 +246,8 @@ void loop()
   else
   {
     client.loop();
-    /*if (millis() - lastMillis > 5000)
+    /* En caso de añadir escritura hacia AWS IoT
+    if (millis() - lastMillis > 5000)
     {
       lastMillis = millis();
       sendData();
